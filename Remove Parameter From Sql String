@@ -1,0 +1,249 @@
+public static string removeParamtericValuesFromSql(string text, string cikarilacakDeger)
+{
+    string whereoperator = " WHERE ";
+    string whereoperator1 = " WHERE(";
+    string andOperator = " AND ";
+    string andOperator1 = " AND(";
+    string andOperator2 = ")AND ";
+    string andOperator3 = ")AND(";
+    string orOperator = " OR ";
+    string orOperator1 = " OR(";
+    string orOperator2 = ")OR ";
+    string orOperator3 = ")OR(";
+    string[] kosulOperatorleri = new string[] { whereoperator, whereoperator1, andOperator, andOperator1, andOperator2, andOperator3,
+        orOperator, orOperator1, orOperator2, orOperator3 };
+    string inOperator = " IN ";
+    string inOperator1 = " IN(";
+    string inOperator2 = ")IN ";
+    string inOperator3 = ")IN(";
+    string[] inOperatorleri = new string[] { inOperator, inOperator1, inOperator2, inOperator3};
+    string esittirOperator = "=";
+    string buyukturOperator = ">";
+    string kucukturOperator = "<";
+    string parantezAcmaOperator = "(";
+    string parantezKapamaOperator = ")";
+    string bosluk = " ";
+    string atOperatoru = "@";
+    int cikarilacakDegerUzunlugu = cikarilacakDeger.Length;
+
+    Dictionary<int, string> indexDegerleri = text.AllIndexesOf(cikarilacakDeger);
+    if (indexDegerleri.Count > 0)
+    {
+        foreach (var index in indexDegerleri.OrderBy(i => i.Key))
+        {
+            string oncesi = text.Substring(0, index.Key);
+
+            #region gereksiz parantezler yok edilir
+            for (int i = 1; i < index.Key; i++)
+            {
+                string ufakParca = oncesi.Substring(index.Key - i, i);
+                int parantezAcmaOperatorCount = ufakParca.Split('(').Length - 1;
+                if (inOperatorleri.Any(ufakParca.Contains) && parantezAcmaOperatorCount == 2 &&
+                    !kosulOperatorleri.Any(ufakParca.Contains))
+                {
+                    int gereksizParantezKapamaYeri = 0;
+                    int parantezKapamaOperatorCount = 0;
+                    for (int j = 0; j < text.Length; j++)
+                    {
+                        string ufakParcaExtra = text.Substring(index.Key + cikarilacakDegerUzunlugu + j, 1);
+                        if (ufakParcaExtra.Contains(parantezKapamaOperator))
+                        {
+                            parantezKapamaOperatorCount++;
+                            if (parantezKapamaOperatorCount == 2)
+                            {
+                                gereksizParantezKapamaYeri = index.Key + cikarilacakDegerUzunlugu + j;
+                                break;
+                            }
+                        }
+                        else if (!ufakParcaExtra.Contains(bosluk))
+                        {
+                            break;
+                        }
+                    }
+                    if (gereksizParantezKapamaYeri != 0) //Fazladan parantez açma kapama bulundu.
+                    {
+                        int gereksizParantezAcmaYeri = index.Key - i;
+                        int gereksizParantezKapamaYeriOnde = 0;
+                        for (int j = gereksizParantezAcmaYeri; j < gereksizParantezKapamaYeri; j++) //gereksiz parantez önde ise onun yeri bulunur!
+                        {
+                            try
+                            {
+                                string ufakParcaExtra = text.Substring(gereksizParantezAcmaYeri + 1, j - gereksizParantezAcmaYeri + 1);
+                                if (!ufakParcaExtra.Contains(bosluk) && !ufakParcaExtra.Contains(parantezAcmaOperator) && !ufakParcaExtra.Contains(atOperatoru))
+                                {
+                                    if (ufakParcaExtra.Contains(parantezKapamaOperator))
+                                    {
+                                        gereksizParantezKapamaYeriOnde = j + 1;
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+                            catch
+                            {
+                                break;
+                            }
+                        }
+
+                        if (gereksizParantezKapamaYeriOnde > 0)
+                        {
+                            text = text.Remove(gereksizParantezKapamaYeriOnde, 1).Insert(gereksizParantezKapamaYeriOnde, bosluk);
+                        }
+                        else
+                        {
+                            text = text.Remove(gereksizParantezKapamaYeri, 1).Insert(gereksizParantezKapamaYeri, bosluk);
+                        }
+
+                        text = text.Remove(gereksizParantezAcmaYeri, 1).Insert(gereksizParantezAcmaYeri, bosluk);
+                        return removeSomePartsFromSql(text, cikarilacakDeger);
+                    }
+                    break;
+                }
+                else if (ufakParca.Contains(esittirOperator) || ufakParca.Contains(buyukturOperator) || ufakParca.Contains(kucukturOperator))
+                {
+                    if (ufakParca.Contains(parantezAcmaOperator) && !kosulOperatorleri.Any(ufakParca.Contains))
+                    {
+                        int gereksizParantezKapamaYeri = 0;
+                        for (int j = 0; j < text.Length; j++)
+                        {
+                            try
+                            {
+                                string ufakParcaExtra = text.Substring(index.Key + cikarilacakDegerUzunlugu + j, 1);
+                                if (ufakParcaExtra.Contains(parantezKapamaOperator))
+                                {
+                                    gereksizParantezKapamaYeri = index.Key + cikarilacakDegerUzunlugu + j;
+                                    break;
+                                }
+                                else if (!ufakParcaExtra.Contains(bosluk))
+                                {
+                                    break;
+                                }
+                            }
+                            catch
+                            {
+                                break;
+                            }
+
+                        }
+                        if (gereksizParantezKapamaYeri != 0) //Fazladan parantez açma kapama bulundu.
+                        {
+                            int gereksizParantezAcmaYeri = index.Key - i;
+                            int gereksizParantezKapamaYeriOnde = 0;
+                            for (int j = gereksizParantezAcmaYeri; j < gereksizParantezKapamaYeri; j++) //gereksiz parantez önde ise onun yeri bulunur!
+                            {
+                                string ufakParcaExtra = text.Substring(gereksizParantezAcmaYeri + 1, j - gereksizParantezAcmaYeri + 1);
+                                if (!ufakParcaExtra.Contains(bosluk) && !ufakParcaExtra.Contains(parantezAcmaOperator) && !ufakParcaExtra.Contains(atOperatoru))
+                                {
+                                    if (ufakParcaExtra.Contains(parantezKapamaOperator))
+                                    {
+                                        gereksizParantezKapamaYeriOnde = j + 1;
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+
+                            if (gereksizParantezKapamaYeriOnde > 0)
+                            {
+                                text = text.Remove(gereksizParantezKapamaYeriOnde, 1).Insert(gereksizParantezKapamaYeriOnde, bosluk);
+                            }
+                            else
+                            {
+                                text = text.Remove(gereksizParantezKapamaYeri, 1).Insert(gereksizParantezKapamaYeri, bosluk);
+                            }
+
+                            text = text.Remove(gereksizParantezAcmaYeri, 1);
+                            return removeSomePartsFromSql(text, cikarilacakDeger);
+                        }
+                        break;
+                    }
+                }
+            }
+            #endregion
+
+            for (int i = 1; i < index.Key; i++)
+            {
+                string ufakParca = oncesi.Substring(index.Key - i, i);
+                if (inOperatorleri.Any(ufakParca.Contains))
+                {
+                    int parantezKapamaOperatorCount = ufakParca.Split(')').Length - 1;
+                    int parantezAcmaOperatorCount = ufakParca.Split('(').Length - 1;
+                    if (parantezAcmaOperatorCount == parantezKapamaOperatorCount + 2)
+                    {
+                        int extraUzunluk = 0;
+                        for (int j = 1; j < text.Length; j++)
+                        {
+                            extraUzunluk++;
+                            string ufakParcaExtra = text.Substring(index.Key + cikarilacakDegerUzunlugu, j);
+                            if (kosulOperatorleri.Any(ufakParca.Contains))
+                            {
+                                break;
+                            }
+                        }
+                        int removeBaslangic = index.Key - i + 1;
+                        int removeUzunluk = ((index.Key + cikarilacakDegerUzunlugu + extraUzunluk) - (index.Key - i)) - 1;
+                        text = text.Remove(removeBaslangic, removeUzunluk);
+                        return removeSomePartsFromSql(text, cikarilacakDeger);
+                    }
+                    else if (kosulOperatorleri.Any(ufakParca.Contains))
+                    {
+                        int extraUzunluk = 0;
+                        for (int j = 1; j < text.Length; j++)
+                        {
+                            extraUzunluk++;
+                            string ufakParcaExtra = text.Substring(index.Key + cikarilacakDegerUzunlugu, j);
+                            if (ufakParcaExtra.Contains(parantezKapamaOperator))
+                            {
+                                break;
+                            }
+                        }
+                        int removeBaslangic = index.Key - i;
+                        int removeUzunluk = ((index.Key + cikarilacakDegerUzunlugu + extraUzunluk) - (index.Key - i));
+                        text = text.Remove(removeBaslangic, removeUzunluk);
+                        return removeSomePartsFromSql(text, cikarilacakDeger);
+                    }
+                }
+                else if (ufakParca.Contains(esittirOperator) || ufakParca.Contains(buyukturOperator) || ufakParca.Contains(kucukturOperator))
+                {
+                    int parantezKapamaOperatorCount = ufakParca.Split(')').Length - 1;
+                    int parantezAcmaOperatorCount = ufakParca.Split('(').Length - 1;
+                    if (parantezAcmaOperatorCount == parantezKapamaOperatorCount + 1)
+                    {
+                        int extraUzunluk = 0;
+                        for (int j = 1; j < text.Length; j++)
+                        {
+                            extraUzunluk++;
+                            string ufakParcaExtra = text.Substring(index.Key + cikarilacakDegerUzunlugu, j);
+                            if (kosulOperatorleri.Any(ufakParca.Contains))
+                            {
+                                break;
+                            }
+                        }
+                        int removeBaslangic = index.Key - i + 1;
+                        int removeUzunluk = ((index.Key + cikarilacakDegerUzunlugu + extraUzunluk) - (index.Key - i)) - 1;
+                        text = text.Remove(removeBaslangic, removeUzunluk);
+                        return removeSomePartsFromSql(text, cikarilacakDeger);
+                    }
+                    else if (kosulOperatorleri.Any(ufakParca.Contains))
+                    {
+                        int removeBaslangic = index.Key - i;
+                        int removeUzunluk = ((index.Key + cikarilacakDegerUzunlugu) - (index.Key - i));
+                        text = text.Remove(removeBaslangic, removeUzunluk);
+                        return removeSomePartsFromSql(text, cikarilacakDeger);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    else
+    {
+        return text;
+    }
+}
